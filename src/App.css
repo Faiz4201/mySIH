@@ -1,0 +1,187 @@
+.landing-container {
+  position: relative;
+  width: 100vw;
+  height: 100vh;
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  overflow: hidden;
+  background-color: #000;
+}
+
+.thumbnail-img {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  display: block;
+}
+
+.hero-overlay {
+  position: absolute;
+  top: 26%;
+  left: 3.8%;
+  z-index: 10;
+  pointer-events: none;
+  display: flex;
+  align-items: center;
+}
+
+.slogan-text {
+  font-family: 'Segoe UI', system-ui, -apple-system, Roboto, sans-serif;
+  font-size: 3.85rem;
+  font-weight: 400;
+  color: #667964;
+  letter-spacing: 0.5px;
+  display: flex;
+  align-items: center;
+  margin: 0;
+  text-shadow: 0px 1px 3px rgba(255, 255, 255, 0.6);
+}
+
+.slogan-cursor {
+  display: inline-block;
+  width: 3px;
+  height: 1.85rem;
+  background-color: #2b3a21;
+  margin-left: 4px;
+  animation: blink 0.8s infinite;
+}
+
+.bottom-panel-buttons {
+  position: absolute;
+  bottom: 8%;
+  left: 3.8%;
+  z-index: 20;
+  display: flex;
+  gap: 1.5rem;
+  pointer-events: auto;
+}
+
+
+.btn {
+  font-family: 'Segoe UI', system-ui, -apple-system, Roboto, sans-serif;
+  font-size: 1.05rem;
+  font-weight: 600;
+  padding: 14px 32px;
+  border-radius: 8px;
+  cursor: pointer;
+  transition: all 0.25s ease-in-out;
+  letter-spacing: 0.3px;
+  outline: none;
+  white-space: nowrap;
+}
+
+.btn-farmer {
+  background-color: #2b3a21;
+  color: #ffffff;
+  border: 1.5px solid #3d5030;
+  box-shadow: 0 4px 16px rgba(0, 0, 0, 0.25);
+}
+
+.btn-farmer:hover {
+  background-color: #3b4f2e;
+  border-color: #4f683e;
+  transform: translateY(-2px);
+  box-shadow: 0 6px 20px rgba(0, 0, 0, 0.35);
+}
+
+.btn-admin {
+  background: rgba(255, 255, 255, 0.85);
+  color: #2b3a21;
+  border: 2px solid #2b3a21;
+  backdrop-filter: blur(6px);
+  -webkit-backdrop-filter: blur(6px);
+  box-shadow: 0 4px 16px rgba(0, 0, 0, 0.15);
+}
+
+.btn-admin:hover {
+  background: #2b3a21;
+  color: #ffffff;
+  transform: translateY(-2px);
+  box-shadow: 0 6px 20px rgba(0, 0, 0, 0.3);
+}
+
+.blank-page {
+  width: 100vw;
+  height: 100vh;
+  background-color: #ffffff;
+  display: flex;
+  padding: 2rem;
+  box-sizing: border-box;
+}
+
+.back-btn {
+  font-family: 'Segoe UI', system-ui, sans-serif;
+  font-size: 0.95rem;
+  font-weight: 600;
+  padding: 10px 20px;
+  border-radius: 6px;
+  background-color: #2b3a21;
+  color: #ffffff;
+  border: none;
+  cursor: pointer;
+  height: fit-content;
+  transition: background-color 0.2s ease;
+}
+
+.back-btn:hover {
+  background-color: #3b4f2e;
+}
+
+@keyframes blink {
+  0%, 100% {
+    opacity: 1;
+  }
+  50% {
+    opacity: 0;
+  }
+}
+
+@media (max-width: 1024px) {
+  .hero-overlay {
+    top: 24%;
+    left: 4%;
+  }
+  .slogan-text {
+    font-size: 1.35rem;
+  }
+  .slogan-cursor {
+    height: 1.35rem;
+  }
+  .bottom-panel-buttons {
+    bottom: 6%;
+    left: 4%;
+  }
+}
+
+@media (max-width: 640px) {
+  .hero-overlay {
+    top: 22%;
+    left: 4%;
+  }
+  .slogan-text {
+    font-size: 1rem;
+  }
+  .slogan-cursor {
+    height: 1rem;
+  }
+  .bottom-panel-buttons {
+    bottom: 5%;
+    left: 4%;
+    flex-direction: column;
+    gap: 0.75rem;
+    width: auto;
+    align-items: flex-start;
+  }
+  .btn {
+    font-size: 0.95rem;
+    padding: 12px 24px;
+    width: auto;
+    text-align: left;
+  }
+}
+
+
+
+
+
