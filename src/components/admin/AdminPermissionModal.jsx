@@ -10,7 +10,7 @@ export default function AdminPermissionModal({ isOpen, onClose, onPermissionGran
   const handleGrantLocation = () => {
     setLoading(true);
     setStatusMessage('Detecting official GPS coordinates & jurisdiction...');
-    
+
     if (navigator.geolocation) {
       navigator.geolocation.getCurrentPosition(
         (position) => {
@@ -19,7 +19,7 @@ export default function AdminPermissionModal({ isOpen, onClose, onPermissionGran
             granted: true,
             lat: position.coords.latitude,
             lng: position.coords.longitude,
-            district: 'Ludhiana District (Auto-Detected)'
+            district: 'Rourkela (Auto-Detected)'
           });
           onClose();
         },
@@ -27,20 +27,20 @@ export default function AdminPermissionModal({ isOpen, onClose, onPermissionGran
           setLoading(false);
           setStatusMessage('Location permission denied or unavailable. Switching to default district jurisdiction.');
           setTimeout(() => {
-            onPermissionGranted({ granted: false, district: 'Ludhiana District (Default)' });
+            onPermissionGranted({ granted: false, district: 'Rourkela (Default)' });
             onClose();
           }, 1200);
         }
       );
     } else {
       setLoading(false);
-      onPermissionGranted({ granted: false, district: 'Ludhiana District' });
+      onPermissionGranted({ granted: false, district: 'Rourkela' });
       onClose();
     }
   };
 
   const handleUseDemo = () => {
-    onPermissionGranted({ granted: true, isDemo: true, district: 'Ludhiana District' });
+    onPermissionGranted({ granted: true, isDemo: true, district: 'Rourkela' });
     onClose();
   };
 
@@ -68,22 +68,22 @@ export default function AdminPermissionModal({ isOpen, onClose, onPermissionGran
         )}
 
         <div className="modal-actions">
-          <button 
-            className="btn btn-grant-location" 
-            onClick={handleGrantLocation} 
+          <button
+            className="btn btn-grant-location"
+            onClick={handleGrantLocation}
             disabled={loading}
           >
             <MapPin size={18} />
             {loading ? 'Detecting Location...' : '📍 Grant Location & Jurisdiction Access'}
           </button>
 
-          <button 
-            className="btn btn-demo-mode" 
+          <button
+            className="btn btn-demo-mode"
             onClick={handleUseDemo}
             disabled={loading}
           >
             <Globe size={18} />
-            🌐 Use Demo Jurisdiction (Ludhiana District)
+            🌐 Use Demo Jurisdiction (Rourkela)
           </button>
         </div>
 

@@ -150,3 +150,35 @@ src/
    - Use the **Demo Simulator Panel** to adjust rainfall deficit and crop price crash.
    - Observe live update of the **Distress Risk Score** (from Green to Red).
    - Route an alert to a local officer and trace its lifecycle to resolution.
+
+---
+
+## 🗺️ Extension: Rourkela Map & Farmer Data Sync (Requested Feature)
+
+### Goal
+Provide exactly 10 Rourkela-based farmer profiles on the map, provide their login credentials on the farmer signup page, and enable live state synchronization between the Farmer Panel and Admin Dashboard (so a specific farmer's request triggers the admin dashboard).
+
+### Proposed Changes
+
+#### [MODIFY] [mockData.js](file:///c:/Users/Faiz/SIh/src/data/mockData.js)
+- Replace `INITIAL_FARMERS` with 10 exact Rourkela farmer profiles (using Lat/Lng around `22.22` / `84.85`).
+- Change `DISTRICTS` to default to Rourkela (Sundargarh).
+- Implement a `loadFarmers` and `saveFarmers` function utilizing `localStorage` to emulate a fully stateful backend for the hackathon demo.
+
+#### [MODIFY] [signup.jsx](file:///c:/Users/Faiz/SIh/src/components/farmer/signup.jsx)
+- Render the 10 Rourkela demo login credentials so judges/users can log in as a specific farmer.
+- Store the chosen farmer's `id` in `localStorage` upon login.
+
+#### [MODIFY] [App.jsx](file:///c:/Users/Faiz/SIh/src/App.jsx)
+- Pass `loggedInFarmerId` down to `FarmerPanel` to drive personalized data loading.
+
+#### [MODIFY] [farmerpanel.jsx](file:///c:/Users/Faiz/SIh/src/components/farmer/farmerpanel.jsx)
+- Read the active farmer from `localStorage`.
+- When "Request Assistance" is clicked, update that specific farmer's status (e.g. `status: 'FLAGGED'`) in `localStorage` instead of using local component state.
+
+#### [MODIFY] [AdminPanel.jsx](file:///c:/Users/Faiz/SIh/src/components/admin/AdminPanel.jsx)
+- Refactor the `useState` for `farmers` to derive from `localStorage`.
+- Add a listener for `storage` events to actively auto-refresh the UI when the Farmer Panel edits `localStorage`.
+
+### Verification Plan
+- **Manual Verification**: Log into Farmer Panel with one of the 10 Rourkela credentials. Click "Request Assistance". Open Admin Panel and verify that this specific farmer's map pin and tables reflect the `FLAGGED` state instantly using `localStorage` syncing.

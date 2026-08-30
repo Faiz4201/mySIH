@@ -39,7 +39,9 @@ const CROP_DATABASE = {
 export default function FarmerPanel({ onBackToHome }) {
   const [lang, setLang] = useState('en');
   const [isPlayingAudio, setIsPlayingAudio] = useState(false);
+  const [audioItem, setAudioItem] = useState(null);
   const [distressSent, setDistressSent] = useState(false);
+  const [translatedBackendAdvisory, setTranslatedBackendAdvisory] = useState({ pestRisk: null, rainAdvice: null });
 
   // Backend Data & Dynamic Score State
   const [farmerData, setFarmerData] = useState(null);
@@ -55,8 +57,8 @@ export default function FarmerPanel({ onBackToHome }) {
   const [estimatedYieldQuintals, setEstimatedYieldQuintals] = useState(20);
 
   // Location & Weather state
-  const [locationName, setLocationName] = useState('Ludhiana, Punjab');
-  const [coords, setCoords] = useState({ lat: 30.901, lng: 75.857 });
+  const [locationName, setLocationName] = useState('Rourkela, Odisha');
+  const [coords, setCoords] = useState({ lat: 22.25, lng: 84.81 });
   const [weather, setWeather] = useState({
     temp: 31,
     humidity: 68,
@@ -122,18 +124,29 @@ export default function FarmerPanel({ onBackToHome }) {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
-  // Fetch Database Payload from Node server
+  // Fetch Database Payload from Local Sync (emulated backend)
   useEffect(() => {
-    const fetchBackendData = async () => {
+    const fetchLocalData = async () => {
       try {
-        const res = await fetch('http://localhost:5000/api/farmer/F-101');
-        const data = await res.json();
-        setFarmerData(data);
+        const { loadFarmers } = await import('../../data/mockData.js');
+        const allFarmers = loadFarmers();
+        const loggedInId = localStorage.getItem('loggedInFarmerId') || 'F-101';
+        const current = allFarmers.find(f => f.id === loggedInId) || allFarmers[0];
+
+        setFarmerData(current);
+
+        if (current.crop) {
+          setSelectedCrop(current.crop.split(' & ')[0] || 'Wheat');
+        }
+        if (current.lat && current.lng) {
+          setCoords({ lat: current.lat, lng: current.lng });
+          setLocationName(`${current.village}, ${current.district}`);
+        }
       } catch (error) {
-        console.error("Backend fetch error:", error);
+        console.error("Local fetch error:", error);
       }
     };
-    fetchBackendData();
+    fetchLocalData();
   }, []);
 
   // --- NEW: Fetch Dynamic Backend Advisory when Crop Changes ---
@@ -187,6 +200,39 @@ export default function FarmerPanel({ onBackToHome }) {
     }
   }, [farmerData, weather]);
 
+  useEffect(() => {
+    async function translateBackendData() {
+      if (!backendAdvisory) {
+        setTranslatedBackendAdvisory({ pestRisk: null, rainAdvice: null });
+        return;
+      }
+
+      if (lang === 'en') {
+        setTranslatedBackendAdvisory({ pestRisk: backendAdvisory.pestRisk, rainAdvice: backendAdvisory.rainAdvice });
+        return;
+      }
+
+      const targetLang = lang === 'hi' ? 'hi' : lang === 'or' ? 'or' : 'en';
+      try {
+        const pestRes = await fetch(`/api/translate/translate_a/single?client=gtx&sl=en&tl=${targetLang}&dt=t&q=${encodeURIComponent(backendAdvisory.pestRisk)}`);
+        const pestData = await pestRes.json();
+        const translatedPest = pestData[0].map(x => x[0]).join('');
+
+        const rainRes = await fetch(`/api/translate/translate_a/single?client=gtx&sl=en&tl=${targetLang}&dt=t&q=${encodeURIComponent(backendAdvisory.rainAdvice)}`);
+        const rainData = await rainRes.json();
+        const translatedRain = rainData[0].map(x => x[0]).join('');
+
+        setTranslatedBackendAdvisory({ pestRisk: translatedPest, rainAdvice: translatedRain });
+      } catch (err) {
+        console.error("Translation fail:", err);
+        // If the translation API is completely blocked by the browser, fallback to our LOCAL 
+        // internal dictionary translation instead of forcing the English backend text onto the screen!
+        setTranslatedBackendAdvisory({ pestRisk: null, rainAdvice: null });
+      }
+    }
+    translateBackendData();
+  }, [lang, backendAdvisory]);
+
   const translations = {
     en: {
       appName: 'KrishiRakshak Farmer',
@@ -196,8 +242,9 @@ export default function FarmerPanel({ onBackToHome }) {
       stopAudio: 'Stop Audio',
       cropConfigTitle: 'Crop & Land Configuration',
       selectCrop: 'Your primary crop',
-      acreageLabel: 'Land under cultivation',
-      yieldLabel: 'Estimated yield',
+      acreageLabel: 'Land under cultivation (acres)',
+      yieldLabel: 'Estimated yield (Quintal)',
+      mspLabel: 'Govt MSP',
       weatherTitle: 'Hyperlocal Weather & Field Status',
       soilTitle: 'Recommended soil & field status',
       advisoryTitle: 'Actionable recommendation',
@@ -206,6 +253,33 @@ export default function FarmerPanel({ onBackToHome }) {
       financialTitle: 'Farmer financial safety & risk status',
       requestBtn: 'Request agri-officer assistance',
       requestSent: 'Assistance requested. District agri-officer dispatched.',
+      crops: { Wheat: 'Wheat', Paddy: 'Paddy', Cotton: 'Cotton', Tomato: 'Tomato' },
+      metrics: {
+        weatherLabel: 'Live weather', rainForecast: 'Rain forecast:', wind: 'Wind:', hum: 'Hum:',
+        pestRiskTitle: 'Pest & disease outbreak risk', highRisk: 'High risk', lowRisk: 'Low risk', sprayNeeded: 'Spray needed',
+        activeThreat: 'Active threat for', inHumid: 'in humid weather', bestPriceTitle: 'Best nearby market price', overMsp: 'over MSP'
+      },
+      soil: { n: 'Nitrogen (N)', p: 'Phosphorus (P)', k: 'Potassium (K)', moisture: 'Optimal soil moisture' },
+      mandi: { name: 'Mandi name', distance: 'Distance', price: 'Price / quintal', transport: 'Est. transport cost', profit: 'Est. net profit', action: 'Action', lock: 'Lock mandi price' },
+      financial: { riskFactors: 'Identified risk factors', rainIrregularity: 'Rainfall irregularity', highVariance: 'High variance', kccStatus: 'KCC loan status', paymentDue: 'Payment due in', days: 'days', bimaStatus: 'PM Fasal Bima insurance status', activePolicy: 'Active · Policy' },
+      advisories: {
+        Wheat: {
+          pest: 'High humidity detected. Watch for Yellow Rust & Aphids — apply Neem oil or Propiconazole spray.',
+          rain: 'Rainfall expected soon. Delay heavy irrigation for 48 hours to prevent root rot.'
+        },
+        Paddy: {
+          pest: 'Warm & humid weather favorable for Stem Borer. Apply Trichogramma bio-cards.',
+          rain: 'Heavy rain favorable for standing water; ensure field bunds are intact.'
+        },
+        Cotton: {
+          pest: 'High threat of Pink Bollworm in humid conditions. Inspect 20 bolls per acre.',
+          rain: 'Ensure proper drainage to avoid waterlogging in cotton rows.'
+        },
+        Tomato: {
+          pest: 'Favorable conditions for Early Blight. Spray Mancozeb/Copper Oxychloride before evening.',
+          rain: 'High moisture detected. Stake plants to prevent soil-borne fruit infections.'
+        }
+      }
     },
     hi: {
       appName: 'कृषि रक्षक किसान',
@@ -215,8 +289,9 @@ export default function FarmerPanel({ onBackToHome }) {
       stopAudio: 'ऑडियो रोकें',
       cropConfigTitle: 'फसल और भूमि विन्यास',
       selectCrop: 'आपकी मुख्य फसल',
-      acreageLabel: 'खेती के अंतर्गत भूमि',
-      yieldLabel: 'अनुमानित उपज',
+      acreageLabel: 'खेती के अंतर्गत भूमि (एकड़)',
+      yieldLabel: 'अनुमानित उपज (क्विंटल)',
+      mspLabel: 'सरकार MSP',
       weatherTitle: 'स्थानीय मौसम और खेत की स्थिति',
       soilTitle: 'अनुशंसित मृदा एवं खेत स्थिति',
       advisoryTitle: 'कार्रवाई योग्य सलाह',
@@ -224,56 +299,180 @@ export default function FarmerPanel({ onBackToHome }) {
       mandiSub: 'आपकी अनुमानित उपज पर आधारित शुद्ध लाभ',
       financialTitle: 'किसान वित्तीय स्थिति और संकट चेतावनी',
       requestBtn: 'कृषि अधिकारी सहायता का अनुरोध करें',
-      requestSent: 'सहायता का अनुरोध किया गया। जिला कृषि अधिकारी तैनात।',
+      requestSent: 'सहायता का अनुरोध किया गया। जिला अधिकारी तैनात।',
+      crops: { Wheat: 'गेहूं (Wheat)', Paddy: 'धान (Paddy)', Cotton: 'कपास (Cotton)', Tomato: 'टमाटर (Tomato)' },
+      metrics: { weatherLabel: 'वास्तविक मौसम', rainForecast: 'बारिश:', wind: 'हवा:', hum: 'नमी:', pestRiskTitle: 'कीट एवं रोग प्रकोप जोखिम', highRisk: 'उच्च जोखिम', lowRisk: 'कम जोखिम', sprayNeeded: 'छिड़काव आवश्यक', activeThreat: 'नम मौसम में सक्रिय खतरा', inHumid: '', bestPriceTitle: 'सर्वश्रेष्ठ मंडी मूल्य', overMsp: 'MSP से ज्यादा' },
+      soil: { n: 'नाइट्रोजन (N)', p: 'फास्फोरस (P)', k: 'पोटेशियम (K)', moisture: 'इष्टतम मिट्टी की नमी' },
+      mandi: { name: 'मंडी का नाम', distance: 'दूरी', price: 'मूल्य / क्विंटल', transport: 'परिवहन लागत', profit: 'अनुमानित शुद्ध लाभ', action: 'कार्रवाई', lock: 'मूल्य लॉक करें' },
+      financial: { riskFactors: 'पहचाने गए जोखिम', rainIrregularity: 'वर्षा अनियमितता', highVariance: 'उच्च भिन्नता', kccStatus: 'KCC ऋण स्थिति', paymentDue: 'देय भुगतान', days: 'दिनों में', bimaStatus: 'पीएम फसल बीमा स्थिति', activePolicy: 'सक्रिय · पॉलिसी' },
+      advisories: {
+        Wheat: {
+          pest: 'उच्च आर्द्रता। पीला रतुआ और एफिड्स के लिए ध्यान दें — नीम का तेल या प्रोपिकोनाज़ोल स्प्रे करें।',
+          rain: 'जल्द ही बारिश की उम्मीद है। जड़ सड़न को रोकने के लिए 48 घंटे तक भारी सिंचाई रोकें।'
+        },
+        Paddy: {
+          pest: 'स्टेम बोरर (तना छेदक) के लिए मौसम अनुकूल है। ट्राइकोग्रामा बायो-कार्ड लगाएं।',
+          rain: 'भारी बारिश ठहरे हुए पानी के लिए अनुकूल है; सुनिश्चित करें कि खेत की मेड़ें सुरक्षित हैं।'
+        },
+        Cotton: {
+          pest: 'आर्द्र अवस्था में पिंक बॉलवॉर्म (गुलाबी सुंडी) की उच्च आशंका। प्रति एकड़ 20 टिंडों का निरीक्षण करें।',
+          rain: 'कपास की पंक्तियों में जलभराव से बचने के लिए उचित जल निकासी सुनिश्चित करें।'
+        },
+        Tomato: {
+          pest: 'अर्ली ब्लाइट (अगेती झुलसा) के लिए अनुकूल परिस्थितियां। शाम से पहले मैन्कोज़ेब / कॉपर ऑक्सीक्लोराइड का छिड़काव करें।',
+          rain: 'उच्च नमी का पता चला। मिट्टी से होने वाले फलों के संक्रमण को रोकने के लिए पौधों को सहारा दें।'
+        }
+      }
     },
-    pa: {
-      appName: 'ਕ੍ਰਿਸ਼ੀ ਰਕਸ਼ਕ ਕਿਸਾਨ',
-      tagline: 'ਸਥਾਨਕ ਫਸਲ ਸਲਾਹਕਾਰ ਅਤੇ ਸਮਾਰਟ ਮੰਡੀ ਪ੍ਰਣਾਲੀ',
-      liveStatus: 'ਸਲਾਹਕਾਰ ਇੰਜਣ ਸਰਗਰਮ',
-      listenBtn: 'ਆਡੀਓ ਸਲਾਹ ਸੁਣੋ',
-      stopAudio: 'ਆਡੀਓ ਰੋਕੋ',
-      cropConfigTitle: 'ਫ਼ਸਲ ਅਤੇ ਜ਼ਮੀਨ ਦੀ ਚੋਣ',
-      selectCrop: 'ਤੁਹਾਡੀ ਮੁੱਖ ਫ਼ਸਲ',
-      acreageLabel: 'ਕਾਸ਼ਤ ਹੇਠ ਜ਼ਮੀਨ',
-      yieldLabel: 'ਅਨੁਮਾਨਿਤ ਪੈਦਾਵਾਰ',
-      weatherTitle: 'ਮੌਸਮ ਅਤੇ ਖੇਤ ਦੀ ਸਥਿਤੀ',
-      soilTitle: 'ਸਿਫਾਰਸ਼ ਕੀਤੀ ਮਿੱਟੀ ਸਥਿਤੀ',
-      advisoryTitle: 'ਕਾਰਵਾਈ ਯੋਗ ਸਲਾਹ',
-      mandiTitle: 'ਮੰਡੀ ਬਾਜ਼ਾਰ ਮੁੱਲ ਦੀ ਤੁਲਨਾ',
-      mandiSub: 'ਤੁਹਾਡੀ ਅਨੁਮਾਨਿਤ ਪੈਦਾਵਾਰ ਤੇ ਅਧਾਰਿਤ ਸ਼ੁੱਧ ਮੁਨਾਫਾ',
-      financialTitle: 'ਕਿਸਾਨ ਵਿੱਤੀ ਸੁਰੱਖਿਆ ਸਥਿਤੀ',
-      requestBtn: 'ਖੇਤੀਬਾੜੀ ਅਫਸਰ ਦੀ ਸਹਾਇਤਾ ਮੰਗੋ',
-      requestSent: "ਸਹਾਇਤਾ ਦੀ ਬੇਨਤੀ ਕੀਤੀ ਗਈ। ਖੇਤੀਬਾੜੀ ਅਫ਼ਸਰ ਨੂੰ ਸੂਚਿਤ ਕੀਤਾ ਗਿਆ।",
+    or: {
+      appName: 'କୃଷି ରକ୍ଷକ କୃଷକ',
+      tagline: 'ସ୍ଥାନୀୟ ଫସଲ ପରାମର୍ଶ ଏବଂ ସ୍ମାର୍ଟ ମଣ୍ଡି ପ୍ରଣାଳୀ',
+      liveStatus: 'ପରାମର୍ଶ ଇଞ୍ଜିନ ସକ୍ରିୟ',
+      listenBtn: 'ଅଡିଓ ପରାମର୍ଶ ଶୁଣନ୍ତୁ',
+      stopAudio: 'ଅଡିଓ ବନ୍ଦ କରନ୍ତୁ',
+      cropConfigTitle: 'ଫସଲ ଏବଂ ଜମି ବିନ୍ୟାସ',
+      selectCrop: 'ଆପଣଙ୍କର ମୁଖ୍ୟ ଫସଲ',
+      acreageLabel: 'ଚାଷ ଅଧୀନରେ ଥିବା ଜମି (ଏକର)',
+      yieldLabel: 'ଆନୁମାନିକ ଅମଳ (କୁଇଣ୍ଟାଲ)',
+      mspLabel: 'ସରକାରୀ ଏମଏସପି (MSP)',
+      weatherTitle: 'ସ୍ଥାନୀୟ ପାଣିପାଗ ଏବଂ କ୍ଷେତ ସ୍ଥିତି',
+      soilTitle: 'ପରାମର୍ଶିତ ମୃତ୍ତିକା ଏବଂ କ୍ଷେତ ସ୍ଥିତି',
+      advisoryTitle: 'କାର୍ଯ୍ୟକାରୀ ପରାମର୍ଶ',
+      mandiTitle: 'ମଣ୍ଡି ବଜାର ମୂଲ୍ୟ ତୁଳନା',
+      mandiSub: 'ଆପଣଙ୍କର ଆନୁମାନିକ ଅମଳ ଉପରେ ଆଧାରିତ ଶୁଦ୍ଧ ଲାଭ',
+      financialTitle: 'କୃଷକ ଆର୍ଥିକ ସୁରକ୍ଷା ସ୍ଥିତି',
+      requestBtn: 'ସହାୟତା ଅନୁରୋଧ କରନ୍ତୁ',
+      requestSent: 'ସହାୟତା ଅନୁରୋଧ କରାଯାଇଛି। କୃଷି ଅଧିକାରୀ ନିୟୋଜିତ।',
+      crops: { Wheat: 'ଗହମ (Wheat)', Paddy: 'ଧାନ (Paddy)', Cotton: 'କପା (Cotton)', Tomato: 'ଟମାଟୋ (Tomato)' },
+      metrics: { weatherLabel: 'ସିଧାସଳଖ ପାଣିପାଗ', rainForecast: 'ବର୍ଷା ପୂର୍ବାନୁମାନ:', wind: 'ପବନ:', hum: 'ଆର୍ଦ୍ରତା:', pestRiskTitle: 'କୀଟ ଏବଂ ରୋଗ ଆଶଙ୍କା', highRisk: 'ଉଚ୍ଚ ବିପଦ', lowRisk: 'କମ୍ ବିପଦ', sprayNeeded: 'ସ୍ପ୍ରେ ଦରକାର', activeThreat: 'ଆର୍ଦ୍ର ପାଣିପାଗରେ ସକ୍ରିୟ ବିପଦ', inHumid: '', bestPriceTitle: 'ସର୍ବୋତ୍ତମ ବଜାର ମୂଲ୍ୟ', overMsp: 'MSP ଉପରେ' },
+      soil: { n: 'ଯବକ୍ଷାରଜାନ (N)', p: 'ଫସଫରସ୍ (P)', k: 'ପଟାସିୟମ୍ (K)', moisture: 'ମୃତ୍ତିକା ଆର୍ଦ୍ରତା' },
+      mandi: { name: 'ମଣ୍ଡି ନାମ', distance: 'ଦୂରତା', price: 'ମୂଲ୍ୟ / କୁଇଣ୍ଟାଲ', transport: 'ପରିବହନ ଖର୍ଚ୍ଚ', profit: 'ଆନୁମାନିକ ଶୁଦ୍ଧ ଲାଭ', action: 'କାର୍ଯ୍ୟ', lock: 'ମୂଲ୍ୟ ଫିକ୍ସ କରନ୍ତୁ' },
+      financial: { riskFactors: 'ଚିହ୍ନିତ ବିପଦ କାରଣଗୁଡିକ', rainIrregularity: 'ବର୍ଷା ଅନିୟମିତତା', highVariance: 'ଉଚ୍ଚ ପରିବର୍ତ୍ତନଶୀଳତା', kccStatus: 'କେସିସି (KCC) ଋଣ ସ୍ଥିତି', paymentDue: 'ଦେୟ ବାକି ଅଛି', days: 'ଦିନରେ', bimaStatus: 'ପିଏମ ଫସଲ ବୀମା', activePolicy: 'ସକ୍ରିୟ · ପଲିସି' },
+      advisories: {
+        Wheat: {
+          pest: 'ଉଚ୍ଚ ଆର୍ଦ୍ରତା ଦେଖାଯାଇଛି। ୟେଲୋ ରଷ୍ଟ ଗୁଡିକ ପାଇଁ ସତର୍କ ରୁହନ୍ତୁ - ନିମ୍ବ ତେଲ ସ୍ପ୍ରେ କରନ୍ତୁ।',
+          rain: 'ଶୀଘ୍ର ବର୍ଷା ହେବାର ସମ୍ଭାବନା ଅଛି। ମୂଳ ପଚାକୁ ରୋକିବା ପାଇଁ ୪୮ ଘଣ୍ଟା ପର୍ଯ୍ୟନ୍ତ ଜଳସେଚନ କରନ୍ତୁ ନାହିଁ।'
+        },
+        Paddy: {
+          pest: 'ଷ୍ଟେମ୍ ବୋରର୍ ପାଇଁ ପାଗ ଅନୁକୂଳ। ଟ୍ରାଇକୋଗ୍ରାମା ବାୟୋ-କାର୍ଡ ପ୍ରୟୋଗ କରନ୍ତୁ।',
+          rain: 'ଠିଆ ପାଣି ପାଇଁ ପ୍ରବଳ ବର୍ଷା ଅନୁକୂଳ; କ୍ଷେତ ହୁଡା ସୁରକ୍ଷିତ ଥିବା ନିଶ୍ଚିତ କରନ୍ତୁ।'
+        },
+        Cotton: {
+          pest: 'ଆର୍ଦ୍ର ଅବସ୍ଥାରେ ପିଙ୍କ୍ ବୋଲୱର୍ମର ଉଚ୍ଚ ଆଶଙ୍କା। ଏକର ପିଛା ୨୦ଟି ବୋଲ୍ ଯାଞ୍ଚ କରନ୍ତୁ।',
+          rain: 'ତୁଳା ଧାଡିରେ ଜଳାବଦ୍ଧତା ଯେପରି ନହୁଏ ସେଥିପାଇଁ ଉପଯୁକ୍ତ ଜଳ ନିଷ୍କାସନ ବ୍ୟବସ୍ଥା ନିଶ୍ଚିତ କରନ୍ତୁ।'
+        },
+        Tomato: {
+          pest: 'ଅର୍ଲି ବ୍ଲାଇଟ୍ ରୋଗ ପାଇଁ ଅନୁକୂଳ ପରିସ୍ଥିତି। ସନ୍ଧ୍ୟା ପୂର୍ବରୁ ମାନକୋଜେବ୍ ସ୍ପ୍ରେ କରନ୍ତୁ।',
+          rain: 'ଉଚ୍ଚ ଆର୍ଦ୍ରତା ଦେଖାଯାଇଛି। ଫଳ ସଂକ୍ରମଣକୁ ରୋକିବା ପାଇଁ ଗଛକୁ ଟେକି ରଖନ୍ତୁ।'
+        }
+      }
     }
   };
 
   const text = translations[lang] || translations.en;
   const currentCropData = CROP_DATABASE[selectedCrop] || CROP_DATABASE.Wheat;
 
-  // Use backend advisory values if available, with local fallbacks
-  const activePestAdvisory = backendAdvisory?.pestRisk || currentCropData.advisoryPest;
-  const activeRainAdvisory = backendAdvisory?.rainAdvice || currentCropData.advisoryRain;
+  // Utilize the dynamically translated remote backend advisory values first, fallback to internal language dictionary
+  // IF the incoming backend string precisely matches our generic english mock database, intercept and route directly to our PERFECT hand-written human locales!
+  const isMockPest = backendAdvisory?.pestRisk === currentCropData.advisoryPest;
+  const isMockRain = backendAdvisory?.rainAdvice === currentCropData.advisoryRain;
+
+  const activePestAdvisory = isMockPest
+    ? text.advisories[selectedCrop]?.pest
+    : (translatedBackendAdvisory.pestRisk || text.advisories[selectedCrop]?.pest || currentCropData.advisoryPest);
+
+  const activeRainAdvisory = isMockRain
+    ? text.advisories[selectedCrop]?.rain
+    : (translatedBackendAdvisory.rainAdvice || text.advisories[selectedCrop]?.rain || currentCropData.advisoryRain);
   const activeNPK = backendAdvisory?.idealNPK || currentCropData.idealNPK;
 
-  const handleVoiceNarration = () => {
-    if ('speechSynthesis' in window) {
-      if (isPlayingAudio) {
-        window.speechSynthesis.cancel();
-        setIsPlayingAudio(false);
-        return;
-      }
-      window.speechSynthesis.cancel();
-      const narration = `${text.weatherTitle}: ${weather.temp} degrees. ${text.advisoryTitle}: ${
-        weather.isPestRisk ? activePestAdvisory : activeRainAdvisory
-      }`;
-      const utterance = new SpeechSynthesisUtterance(narration);
-      utterance.lang = lang === 'hi' ? 'hi-IN' : lang === 'pa' ? 'pa-IN' : 'en-IN';
-      utterance.rate = 0.9;
-      utterance.onstart = () => setIsPlayingAudio(true);
-      utterance.onend = () => setIsPlayingAudio(false);
-      utterance.onerror = () => setIsPlayingAudio(false);
-      window.speechSynthesis.speak(utterance);
+  const handleVoiceNarration = async () => {
+    // 1. Aggressively cancel any native speech that might be stuck
+    if ('speechSynthesis' in window) window.speechSynthesis.cancel();
+
+    if (isPlayingAudio) {
+      if (audioItem) audioItem.pause();
+      setIsPlayingAudio(false);
+      return;
     }
+
+    const degreesText = lang === 'hi' ? 'डिग्री' : lang === 'or' ? 'ଡିଗ୍ରୀ' : 'degrees';
+    const narration = `${text.weatherTitle}: ${weather.temp} ${degreesText}. ${text.advisoryTitle}: ${weather.isPestRisk ? activePestAdvisory : activeRainAdvisory}`;
+
+    setIsPlayingAudio(true);
+
+    try {
+      // Map internal lang to Sarvam TTS AI lang format (Odia acts as 'od-IN')
+      const langCode = lang === 'hi' ? 'hi-IN' : lang === 'or' ? 'od-IN' : 'en-IN';
+
+      // We use Vite's internal proxy '/api/sarvam' to bypass browser CORS entirely!
+      const res = await fetch('/api/sarvam/text-to-speech', {
+        method: 'POST',
+        headers: {
+          'api-subscription-key': import.meta.env.VITE_SARVAM_API_KEY,
+          'Content-Type': 'application/json'
+        },
+        body: JSON.stringify({
+          inputs: [narration],
+          target_language_code: langCode,
+          speaker: "priya",
+          speech_sample_rate: 8000,
+          enable_preprocessing: true,
+          model: "bulbul:v3"
+        })
+      });
+
+      if (!res.ok) {
+        const errText = await res.text();
+        throw new Error(`Sarvam HTTP ${res.status}: ${errText}`);
+      }
+
+      const data = await res.json();
+      const base64Audio = data.audios[0];
+
+      const audio = new window.Audio("data:audio/wav;base64," + base64Audio);
+      setAudioItem(audio);
+
+      audio.onended = () => setIsPlayingAudio(false);
+      audio.onerror = () => setIsPlayingAudio(false);
+
+      await audio.play();
+    } catch (err) {
+      console.error("Sarvam API failed:", err);
+      alert("Sarvam Audio API Failed:\n" + err.message + "\n\nFalling back to your standard PC voice.");
+      // Fallback
+      if ('speechSynthesis' in window) {
+        const utterance = new SpeechSynthesisUtterance(narration);
+        utterance.lang = lang === 'hi' ? 'hi-IN' : lang === 'or' ? 'or-IN' : 'en-IN';
+        utterance.onend = () => setIsPlayingAudio(false);
+        window.speechSynthesis.speak(utterance);
+      } else {
+        setIsPlayingAudio(false);
+      }
+    }
+  };
+
+  const handleRequestAssistance = async () => {
+    setDistressSent(true);
+    const { loadFarmers, saveFarmers } = await import('../../data/mockData.js');
+    const allFarmers = loadFarmers();
+    const loggedInId = localStorage.getItem('loggedInFarmerId') || 'F-101';
+
+    // Update the state for the admin panel sync
+    const updatedFarmers = allFarmers.map(f => {
+      if (f.id === loggedInId) {
+        return {
+          ...f,
+          riskScore: Math.max(90, f.riskScore), // ensure it shows critical if SOS sent
+          riskLevel: 'CRITICAL',
+          status: 'FLAGGED',
+          primaryTrigger: 'EMERGENCY: Farmer Requested Immediate SOS Assistance'
+        };
+      }
+      return f;
+    });
+
+    saveFarmers(updatedFarmers);
   };
 
   const gaugeRadius = 52;
@@ -550,7 +749,7 @@ export default function FarmerPanel({ onBackToHome }) {
           <div className="lang-picker">
             <button type="button" className={`lang-pill ${lang === 'en' ? 'active' : ''}`} onClick={() => setLang('en')}>EN</button>
             <button type="button" className={`lang-pill ${lang === 'hi' ? 'active' : ''}`} onClick={() => setLang('hi')}>हिं</button>
-            <button type="button" className={`lang-pill ${lang === 'pa' ? 'active' : ''}`} onClick={() => setLang('pa')}>ਪੰ</button>
+            <button type="button" className={`lang-pill ${lang === 'or' ? 'active' : ''}`} onClick={() => setLang('or')}>ଓଡ଼ି</button>
           </div>
 
           <button
@@ -586,7 +785,7 @@ export default function FarmerPanel({ onBackToHome }) {
                   >
                     {Object.keys(CROP_DATABASE).map((crop) => (
                       <option key={crop} value={crop}>
-                        {CROP_DATABASE[crop].icon}  {crop}
+                        {CROP_DATABASE[crop].icon}  {text.crops[crop] || crop}
                       </option>
                     ))}
                   </select>
@@ -604,7 +803,7 @@ export default function FarmerPanel({ onBackToHome }) {
                     className="meta-input"
                     value={cropAcreage}
                     onChange={(e) => setCropAcreage(parseFloat(e.target.value) || 0)}
-                  /> 
+                  />
                 </div>
                 <div className="meta-input-group">
                   <label className="field-label">{text.yieldLabel}</label>
@@ -618,7 +817,7 @@ export default function FarmerPanel({ onBackToHome }) {
                   />
                 </div>
                 <div className="meta-static">
-                  <label className="field-label">Govt MSP</label>
+                  <label className="field-label">{text.mspLabel}</label>
                   <span className="meta-value">₹{currentCropData.msp}/Qtl</span>
                 </div>
               </div>
@@ -631,30 +830,30 @@ export default function FarmerPanel({ onBackToHome }) {
           <div className="metric-card">
             <div className="metric-icon-box blue">🌤️</div>
             <div className="metric-data">
-              <span className="metric-label">Live weather · {locationName.split(',')[0]}</span>
-              <div className="metric-main-val">{weather.temp}°C <span className="trend-up">Hum: {weather.humidity}%</span></div>
-              <span className="metric-subtext">Rain forecast: {weather.rainForecast} · Wind: {weather.windSpeed} km/h</span>
+              <span className="metric-label">{text.metrics.weatherLabel} · {locationName.split(',')[0]}</span>
+              <div className="metric-main-val">{weather.temp}°C <span className="trend-up">{text.metrics.hum} {weather.humidity}%</span></div>
+              <span className="metric-subtext">{text.metrics.rainForecast} {weather.rainForecast} · {text.metrics.wind} {weather.windSpeed} km/h</span>
             </div>
           </div>
 
           <div className={`metric-card ${weather.isPestRisk ? 'alert-card' : ''}`}>
             <div className="metric-icon-box red">🚨</div>
             <div className="metric-data">
-              <span className="metric-label">Pest & disease outbreak risk</span>
+              <span className="metric-label">{text.metrics.pestRiskTitle}</span>
               <div className={`metric-main-val ${weather.isPestRisk ? 'red-text' : ''}`}>
-                {weather.isPestRisk ? 'High risk' : 'Low risk'}
-                {weather.isPestRisk && <span className="badge-critical">Spray needed</span>}
+                {weather.isPestRisk ? text.metrics.highRisk : text.metrics.lowRisk}
+                {weather.isPestRisk && <span className="badge-critical">{text.metrics.sprayNeeded}</span>}
               </div>
-              <span className="metric-subtext">Active threat for {selectedCrop} in humid weather</span>
+              <span className="metric-subtext">{text.metrics.activeThreat} {text.crops[selectedCrop]} {text.metrics.inHumid}</span>
             </div>
           </div>
 
           <div className="metric-card">
             <div className="metric-icon-box green">💰</div>
             <div className="metric-data">
-              <span className="metric-label">Best nearby market price</span>
+              <span className="metric-label">{text.metrics.bestPriceTitle}</span>
               <div className="metric-main-val">₹{currentCropData.msp + 180} <span className="trend-up">/ Qtl</span></div>
-              <span className="metric-subtext">Central APMC (+₹180 over MSP)</span>
+              <span className="metric-subtext">Central APMC (+₹180 {text.metrics.overMsp})</span>
             </div>
           </div>
         </div>
@@ -666,21 +865,21 @@ export default function FarmerPanel({ onBackToHome }) {
           </div>
           <div className="advisory-grid">
             <div className="soil-card-box">
-              <h4 className="box-title">{text.soilTitle} · {selectedCrop}</h4>
+              <h4 className="box-title">{text.soilTitle} · {text.crops[selectedCrop]}</h4>
               <div className="soil-item">
-                <div className="soil-meta"><span>Nitrogen (N)</span><span className="val-text">{activeNPK.n}</span></div>
+                <div className="soil-meta"><span>{text.soil.n}</span><span className="val-text">{activeNPK.n}</span></div>
                 <div className="progress-bg"><div className="progress-fill green" style={{ width: activeNPK.n }} /></div>
               </div>
               <div className="soil-item">
-                <div className="soil-meta"><span>Phosphorus (P)</span><span className="val-text">{activeNPK.p}</span></div>
+                <div className="soil-meta"><span>{text.soil.p}</span><span className="val-text">{activeNPK.p}</span></div>
                 <div className="progress-bg"><div className="progress-fill yellow" style={{ width: activeNPK.p }} /></div>
               </div>
               <div className="soil-item">
-                <div className="soil-meta"><span>Potassium (K)</span><span className="val-text">{activeNPK.k}</span></div>
+                <div className="soil-meta"><span>{text.soil.k}</span><span className="val-text">{activeNPK.k}</span></div>
                 <div className="progress-bg"><div className="progress-fill green" style={{ width: activeNPK.k }} /></div>
               </div>
               <div className="soil-item">
-                <div className="soil-meta"><span>Optimal soil moisture</span><span className="val-text">{activeNPK.moisture}</span></div>
+                <div className="soil-meta"><span>{text.soil.moisture}</span><span className="val-text">{activeNPK.moisture}</span></div>
                 <div className="progress-bg"><div className="progress-fill blue-fill" style={{ width: activeNPK.moisture }} /></div>
               </div>
             </div>
@@ -691,7 +890,7 @@ export default function FarmerPanel({ onBackToHome }) {
                 {weather.isPestRisk ? activePestAdvisory : activeRainAdvisory}
               </p>
               <div className="trigger-badge">
-                Auto-triggered: backend agronomy intelligence mapped to live weather (Hum: {weather.humidity}%, Temp: {weather.temp}°C) for {selectedCrop}.
+                Auto-triggered: backend agronomy intelligence mapped to live weather ({text.metrics.hum} {weather.humidity}%, Temp: {weather.temp}°C) for {selectedCrop}.
               </div>
             </div>
           </div>
@@ -700,19 +899,19 @@ export default function FarmerPanel({ onBackToHome }) {
         {/* Mandi Price Comparison */}
         <section className="card-section">
           <div className="section-header">
-            <h3>{text.mandiTitle} · {selectedCrop}</h3>
+            <h3>{text.mandiTitle} · {text.crops[selectedCrop]}</h3>
             <p className="section-sub">{text.mandiSub} ({estimatedYieldQuintals} quintals)</p>
           </div>
           <div className="table-wrapper">
             <table className="admin-table">
               <thead>
                 <tr>
-                  <th>Mandi name</th>
-                  <th>Distance</th>
-                  <th>Price / quintal</th>
-                  <th>Est. transport cost (₹15/km)</th>
-                  <th>Est. net profit</th>
-                  <th>Action</th>
+                  <th>{text.mandi.name}</th>
+                  <th>{text.mandi.distance}</th>
+                  <th>{text.mandi.price}</th>
+                  <th>{text.mandi.transport} (₹15/km)</th>
+                  <th>{text.mandi.profit}</th>
+                  <th>{text.mandi.action}</th>
                 </tr>
               </thead>
               <tbody>
@@ -727,7 +926,7 @@ export default function FarmerPanel({ onBackToHome }) {
                       </td>
                       <td>₹{m.transportCost}</td>
                       <td className="profit-value" style={{ fontWeight: 700 }}>₹{m.netProfit.toLocaleString()}</td>
-                      <td><button className="btn-table-action">Lock mandi price</button></td>
+                      <td><button className="btn-table-action">{text.mandi.lock}</button></td>
                     </tr>
                   );
                 })}
@@ -757,15 +956,15 @@ export default function FarmerPanel({ onBackToHome }) {
                 </div>
               </div>
               <div className="gauge-details">
-                <h4 className="box-title">Identified risk factors</h4>
+                <h4 className="box-title">{text.financial.riskFactors}</h4>
                 <div className="factor-item">
-                  <div className="factor-info"><span>Rainfall irregularity</span><span className="red-text">High variance</span></div>
+                  <div className="factor-info"><span>{text.financial.rainIrregularity}</span><span className="red-text">{text.financial.highVariance}</span></div>
                 </div>
                 <div className="factor-item">
                   <div className="factor-info">
-                    <span>KCC loan status</span>
+                    <span>{text.financial.kccStatus}</span>
                     <span className="red-text">
-                      Payment due in {farmerData?.kccLoan?.daysUntilDue || 4} days 
+                      {text.financial.paymentDue} {farmerData?.kccLoan?.daysUntilDue || 4} {text.financial.days}
                       (₹{farmerData?.kccLoan?.amount?.toLocaleString() || '85,000'})
                     </span>
                   </div>
@@ -775,15 +974,15 @@ export default function FarmerPanel({ onBackToHome }) {
 
             <div className="action-side-panel">
               <div className="loan-status-box">
-                <span className="box-label">PM Fasal Bima insurance status</span>
-                <div className="status-flag green-flag">Active · Policy #KCC-883920-A</div>
+                <span className="box-label">{text.financial.bimaStatus}</span>
+                <div className="status-flag green-flag">{text.financial.activePolicy} #KCC-883920-A</div>
               </div>
 
               <div className="assistance-block">
                 {distressSent ? (
                   <div className="alert-success-banner">✅ {text.requestSent}</div>
                 ) : (
-                  <button type="button" className="btn-dispatch-emergency" onClick={() => setDistressSent(true)}>
+                  <button type="button" className="btn-dispatch-emergency" onClick={handleRequestAssistance}>
                     🆘 {text.requestBtn}
                   </button>
                 )}

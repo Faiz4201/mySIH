@@ -7,18 +7,38 @@ import DistressHeatmapTable from './DistressHeatmapTable';
 import DistressInspector from './DistressInspector';
 import AlertDispatchModal from './AlertDispatchModal';
 import DemoSimulatorDrawer from './DemoSimulatorDrawer';
-import { DISTRICTS, INITIAL_FARMERS, calculateDistressScore } from '../../data/mockData';
+import { DISTRICTS, INITIAL_FARMERS, calculateDistressScore, loadFarmers } from '../../data/mockData';
 import './AdminPanel.css';
 
 export default function AdminPanel({ onBackToHome }) {
   const [selectedDistrict, setSelectedDistrict] = useState(DISTRICTS[0]);
   const [isPermissionModalOpen, setIsPermissionModalOpen] = useState(true);
   const [locationGranted, setLocationGranted] = useState(false);
-  
+
   // Farmers state
-  const [farmers, setFarmers] = useState(INITIAL_FARMERS);
-  const [selectedFarmer, setSelectedFarmer] = useState(INITIAL_FARMERS[0]);
-  
+  const [farmers, setFarmers] = useState([]);
+  const [selectedFarmer, setSelectedFarmer] = useState(null);
+
+  useEffect(() => {
+    const initData = loadFarmers();
+    setFarmers(initData);
+    if (!selectedFarmer) {
+      setSelectedFarmer(initData.find(f => f.districtId === selectedDistrict.id) || initData[0]);
+    }
+
+    const handleStorageUpdate = () => {
+      const updatedFarmers = loadFarmers();
+      setFarmers(updatedFarmers);
+      setSelectedFarmer(prev => {
+        if (!prev) return updatedFarmers[0];
+        return updatedFarmers.find(f => f.id === prev.id) || prev;
+      });
+    };
+
+    window.addEventListener('farmersStorageUpdated', handleStorageUpdate);
+    return () => window.removeEventListener('farmersStorageUpdated', handleStorageUpdate);
+  }, []);
+
   // Modals state
   const [isDispatchModalOpen, setIsDispatchModalOpen] = useState(false);
   const [isSimulatorOpen, setIsSimulatorOpen] = useState(false);
@@ -75,8 +95,9 @@ export default function AdminPanel({ onBackToHome }) {
 
   const handleResetSim = () => {
     setSimParams({ rainDeficit: 40, priceCrash: 35, loanDays: 4 });
-    setFarmers(INITIAL_FARMERS);
-    setSelectedFarmer(INITIAL_FARMERS[0]);
+    const local = loadFarmers();
+    setFarmers(local);
+    setSelectedFarmer(local[0]);
   };
 
   const handleUpdateFarmer = (farmerId, updates) => {
@@ -90,7 +111,7 @@ export default function AdminPanel({ onBackToHome }) {
   return (
     <div className="admin-portal-container">
       {/* 1. Top Header */}
-      <AdminHeader 
+      <AdminHeader
         selectedDistrict={selectedDistrict}
         onDistrictChange={(dist) => {
           setSelectedDistrict(dist);
@@ -106,7 +127,7 @@ export default function AdminPanel({ onBackToHome }) {
       {/* Main Admin Dashboard Body */}
       <main className="admin-dashboard-body">
         {/* 2. Top Interactive District Heatmap Map */}
-        <DistrictRiskMap 
+        <DistrictRiskMap
           farmers={activeFarmersList}
           selectedDistrict={selectedDistrict}
           onSelectFarmer={(farmer) => setSelectedFarmer(farmer)}
@@ -118,7 +139,7 @@ export default function AdminPanel({ onBackToHome }) {
 
         {/* 4. Full-Width Stacked Layout: Heatmap Table (Top) + Distress Inspector (Below) */}
         <div className="admin-stacked-layout">
-          <DistressHeatmapTable 
+          <DistressHeatmapTable
             farmers={activeFarmersList}
             onSelectFarmer={(farmer) => setSelectedFarmer(farmer)}
             selectedFarmerId={selectedFarmer ? selectedFarmer.id : null}
@@ -128,7 +149,7 @@ export default function AdminPanel({ onBackToHome }) {
             }}
           />
 
-          <DistressInspector 
+          <DistressInspector
             selectedFarmer={selectedFarmer}
             onOpenDispatchModal={(farmer) => {
               setSelectedFarmer(farmer);
@@ -139,14 +160,14 @@ export default function AdminPanel({ onBackToHome }) {
       </main>
 
       {/* 5. Permission Modal */}
-      <AdminPermissionModal 
+      <AdminPermissionModal
         isOpen={isPermissionModalOpen}
         onClose={() => setIsPermissionModalOpen(false)}
         onPermissionGranted={handlePermissionGranted}
       />
 
       {/* 6. Officer Dispatch Modal */}
-      <AlertDispatchModal 
+      <AlertDispatchModal
         farmer={selectedFarmer}
         isOpen={isDispatchModalOpen}
         onClose={() => setIsDispatchModalOpen(false)}
@@ -154,7 +175,7 @@ export default function AdminPanel({ onBackToHome }) {
       />
 
       {/* 7. Hackathon Demo Simulator Drawer */}
-      <DemoSimulatorDrawer 
+      <DemoSimulatorDrawer
         isOpen={isSimulatorOpen}
         onClose={() => setIsSimulatorOpen(false)}
         simParams={simParams}

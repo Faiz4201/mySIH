@@ -1,14 +1,14 @@
 import React, { useState } from 'react';
-import { 
-  ShieldCheck, 
-  Lock, 
-  Mail, 
-  User, 
-  Building2, 
-  MapPin, 
-  ArrowLeft, 
-  ArrowRight, 
-  Sparkles, 
+import {
+  ShieldCheck,
+  Lock,
+  Mail,
+  User,
+  Building2,
+  MapPin,
+  ArrowLeft,
+  ArrowRight,
+  Sparkles,
   CheckCircle2,
   FileBadge
 } from 'lucide-react';
@@ -28,7 +28,7 @@ export default function AdminAuth({ onLoginSuccess, onBackToHome }) {
   const [signUpName, setSignUpName] = useState('');
   const [signUpEmail, setSignUpEmail] = useState('');
   const [signUpOfficerId, setSignUpOfficerId] = useState('');
-  const [signUpDistrict, setSignUpDistrict] = useState(DISTRICTS[0]?.id || 'ludhiana');
+  const [signUpDistrict, setSignUpDistrict] = useState(DISTRICTS[0]?.id || 'rourkela');
   const [signUpRole, setSignUpRole] = useState('District Agriculture Collector');
   const [signUpPassword, setSignUpPassword] = useState('');
   const [signUpConfirmPassword, setSignUpConfirmPassword] = useState('');
@@ -64,7 +64,7 @@ export default function AdminAuth({ onLoginSuccess, onBackToHome }) {
     setSignUpName('Dr. Ramesh Sharma');
     setSignUpEmail('dr.rsharma@krishirakshak.gov.in');
     setSignUpOfficerId('AGRI-OFF-8842');
-    setSignUpDistrict('ludhiana');
+    setSignUpDistrict('rourkela');
     setSignUpRole('District Agriculture Collector');
     setSignUpPassword('AdminPass2026!');
     setSignUpConfirmPassword('AdminPass2026!');
@@ -92,13 +92,13 @@ export default function AdminAuth({ onLoginSuccess, onBackToHome }) {
 
         {/* Auth Toggle Tabs */}
         <div className="auth-tabs">
-          <button 
+          <button
             className={`auth-tab ${activeTab === 'login' ? 'active' : ''}`}
             onClick={() => setActiveTab('login')}
           >
             Log In
           </button>
-          <button 
+          <button
             className={`auth-tab ${activeTab === 'signup' ? 'active' : ''}`}
             onClick={() => setActiveTab('signup')}
           >
@@ -113,7 +113,7 @@ export default function AdminAuth({ onLoginSuccess, onBackToHome }) {
               <label>Official Email / Officer ID</label>
               <div className="input-wrapper">
                 <Mail size={18} className="input-icon" />
-                <input 
+                <input
                   type="email"
                   className="auth-input"
                   placeholder="officer@krishirakshak.gov.in"
@@ -128,7 +128,7 @@ export default function AdminAuth({ onLoginSuccess, onBackToHome }) {
               <label>Role / Designation</label>
               <div className="input-wrapper">
                 <Building2 size={18} className="input-icon" />
-                <select 
+                <select
                   className="auth-select"
                   value={loginRole}
                   onChange={(e) => setLoginRole(e.target.value)}
@@ -145,7 +145,7 @@ export default function AdminAuth({ onLoginSuccess, onBackToHome }) {
               <label>Authorization Key / Password</label>
               <div className="input-wrapper">
                 <Lock size={18} className="input-icon" />
-                <input 
+                <input
                   type="password"
                   className="auth-input"
                   placeholder="••••••••••••"
@@ -158,8 +158,8 @@ export default function AdminAuth({ onLoginSuccess, onBackToHome }) {
 
             <div className="auth-options">
               <label className="remember-label">
-                <input 
-                  type="checkbox" 
+                <input
+                  type="checkbox"
                   checked={rememberMe}
                   onChange={(e) => setRememberMe(e.target.checked)}
                 />
@@ -199,7 +199,7 @@ export default function AdminAuth({ onLoginSuccess, onBackToHome }) {
                 <label>Full Officer Name</label>
                 <div className="input-wrapper">
                   <User size={18} className="input-icon" />
-                  <input 
+                  <input
                     type="text"
                     className="auth-input"
                     placeholder="Dr. R. Sharma"
@@ -214,7 +214,7 @@ export default function AdminAuth({ onLoginSuccess, onBackToHome }) {
                 <label>Officer ID / Badge</label>
                 <div className="input-wrapper">
                   <FileBadge size={18} className="input-icon" />
-                  <input 
+                  <input
                     type="text"
                     className="auth-input"
                     placeholder="AGRI-OFF-8842"
@@ -230,7 +230,7 @@ export default function AdminAuth({ onLoginSuccess, onBackToHome }) {
               <label>Official Govt Email</label>
               <div className="input-wrapper">
                 <Mail size={18} className="input-icon" />
-                <input 
+                <input
                   type="email"
                   className="auth-input"
                   placeholder="name@gov.in or name@krishirakshak.gov.in"
@@ -246,7 +246,7 @@ export default function AdminAuth({ onLoginSuccess, onBackToHome }) {
                 <label>Assigned Jurisdiction</label>
                 <div className="input-wrapper">
                   <MapPin size={18} className="input-icon" />
-                  <select 
+                  <select
                     className="auth-select"
                     value={signUpDistrict}
                     onChange={(e) => setSignUpDistrict(e.target.value)}
@@ -264,7 +264,7 @@ export default function AdminAuth({ onLoginSuccess, onBackToHome }) {
                 <label>Designation Role</label>
                 <div className="input-wrapper">
                   <Building2 size={18} className="input-icon" />
-                  <select 
+                  <select
                     className="auth-select"
                     value={signUpRole}
                     onChange={(e) => setSignUpRole(e.target.value)}
@@ -282,7 +282,7 @@ export default function AdminAuth({ onLoginSuccess, onBackToHome }) {
                 <label>Password</label>
                 <div className="input-wrapper">
                   <Lock size={18} className="input-icon" />
-                  <input 
+                  <input
                     type="password"
                     className="auth-input"
                     placeholder="••••••••"
@@ -297,7 +297,7 @@ export default function AdminAuth({ onLoginSuccess, onBackToHome }) {
                 <label>Confirm Password</label>
                 <div className="input-wrapper">
                   <Lock size={18} className="input-icon" />
-                  <input 
+                  <input
                     type="password"
                     className="auth-input"
                     placeholder="••••••••"
@@ -310,8 +310,8 @@ export default function AdminAuth({ onLoginSuccess, onBackToHome }) {
             </div>
 
             <label className="checkbox-label">
-              <input 
-                type="checkbox" 
+              <input
+                type="checkbox"
                 checked={agreedTerms}
                 onChange={(e) => setAgreedTerms(e.target.checked)}
                 required

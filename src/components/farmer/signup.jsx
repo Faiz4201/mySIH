@@ -1,4 +1,5 @@
 import { useState } from 'react';
+import { INITIAL_FARMERS } from '../../data/mockData';
 import './farmer.css';
 
 export default function FarmerSignUp({ onLoginSuccess, onBackToHome }) {
@@ -43,6 +44,13 @@ export default function FarmerSignUp({ onLoginSuccess, onBackToHome }) {
       return;
     }
     if (onLoginSuccess) {
+      // Find checking
+      const foundFarmer = INITIAL_FARMERS.find(f => f.phone === formData.mobileNumber);
+      if (foundFarmer) {
+        localStorage.setItem('loggedInFarmerId', foundFarmer.id);
+      } else {
+        localStorage.setItem('loggedInFarmerId', 'F-101'); // fallback
+      }
       onLoginSuccess();
     } else {
       alert('Registration/Login complete!');
@@ -156,13 +164,25 @@ export default function FarmerSignUp({ onLoginSuccess, onBackToHome }) {
         </div>
 
         {/* Demo Auto-Fill Button */}
-        <button
-          type="button"
-          className="btn-autofill"
-          onClick={handleAutoFillDemo}
-        >
-          ✨ Auto-Fill Demo Credentials & OTP
-        </button>
+        <div style={{ display: 'flex', gap: '10px', marginTop: '15px' }}>
+          <select
+            className="form-input"
+            style={{ flex: 1, padding: '10px', borderRadius: '8px' }}
+            onChange={(e) => {
+              if (!e.target.value) return;
+              const f = INITIAL_FARMERS.find(x => x.id === e.target.value);
+              setFormData({ mobileNumber: f.phone, farmerPasscode: f.pass, otp: '123456' });
+              setOtpSent(true);
+            }}
+          >
+            <option value="">-- View & Select 10 Demo Rourkela Logins --</option>
+            {INITIAL_FARMERS.map(f => (
+              <option key={f.id} value={f.id}>
+                {f.name} ({f.phone}) - {f.village}
+              </option>
+            ))}
+          </select>
+        </div>
 
         <div className="auth-footer-text">
           Already registered?{' '}
