@@ -1,5 +1,5 @@
 import { useState, useEffect } from 'react'
-import thumbnailImg from './assets/SIh thumbnail.png'
+import thumbnailImg from './assets/Sih thumbnail.png'
 import './App.css'
 import AdminPanel from './components/admin/AdminPanel'
 import AdminAuth from './components/admin/AdminAuth'
@@ -47,9 +47,9 @@ function App() {
 
   if (currentPage === 'admin-auth') {
     return (
-      <AdminAuth 
-        onLoginSuccess={() => setCurrentPage('admin')} 
-        onBackToHome={() => setCurrentPage('landing')} 
+      <AdminAuth
+        onLoginSuccess={() => setCurrentPage('admin')}
+        onBackToHome={() => setCurrentPage('landing')}
       />
     )
   }
@@ -60,9 +60,9 @@ function App() {
 
   if (currentPage === 'farmer-auth') {
     return (
-      <FarmerSignUp 
-        onLoginSuccess={() => setCurrentPage('farmer')} 
-        onBackToHome={() => setCurrentPage('landing')} 
+      <FarmerSignUp
+        onLoginSuccess={() => setCurrentPage('farmer')}
+        onBackToHome={() => setCurrentPage('landing')}
       />
     )
   }
