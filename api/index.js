@@ -96,7 +96,5 @@ app.post('/api/mandi/calculate', async (req, res) => {
   }
 });
 
-// Start Server
-app.listen(PORT, () => {
-  console.log(`🚀 Server running on port ${PORT}`);
-});
+// Export the Express API to seamlessly run entirely on Vercel Serverless Edge Network!
+export default app;

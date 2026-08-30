@@ -153,7 +153,7 @@ export default function FarmerPanel({ onBackToHome }) {
   useEffect(() => {
     const fetchAdvisory = async () => {
       try {
-        const res = await fetch(`http://localhost:5000/api/advisory/${selectedCrop}`);
+        const res = await fetch(`/api/advisory/${selectedCrop}`);
         const data = await res.json();
         setBackendAdvisory(data);
       } catch (err) {
@@ -167,7 +167,7 @@ export default function FarmerPanel({ onBackToHome }) {
   useEffect(() => {
     const fetchMandis = async () => {
       try {
-        const res = await fetch('http://localhost:5000/api/mandi/calculate', {
+        const res = await fetch('/api/mandi/calculate', {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
           body: JSON.stringify({ crop: selectedCrop, yieldQuintals: estimatedYieldQuintals })
